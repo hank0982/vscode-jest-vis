@@ -48,6 +48,12 @@ export type RegisterCommand =
       name: string;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       callback: (extension: JestExt, textEditor: vscode.TextEditor, ...args: any[]) => any;
+    }
+  | {
+      type: 'test-case-generation-webview';
+      name: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      callback: (extension: JestExt, textEditor: vscode.TextEditor, ...args: any[]) => any;
     };
 type CommandType = RegisterCommand['type'];
 const CommandPrefix: Record<CommandType, string> = {
@@ -56,6 +62,7 @@ const CommandPrefix: Record<CommandType, string> = {
   workspace: `${extensionName}.with-workspace`,
   'active-text-editor': `${extensionName}.editor`,
   'active-text-editor-workspace': `${extensionName}.editor.workspace`,
+  'test-case-generation-webview': `${extensionName}.editor.webview`,
 };
 export type StartWizardFunc = (options?: StartWizardOptions) => ReturnType<typeof startWizard>;
 export class ExtensionManager {
@@ -218,6 +225,18 @@ export class ExtensionManager {
           }
         );
       }
+      case 'test-case-generation-webview': {
+        return vscode.commands.registerCommand(commandName, () => {
+          // Create and show a new webview
+          const panel = vscode.window.createWebviewPanel(
+            'catCoding', // Identifies the type of the webview. Used internally
+            'Cat Coding', // Title of the panel displayed to the user
+            vscode.ViewColumn.Beside, // Editor column to show the new webview panel in.
+            {} // Webview options. More on these later.
+          );
+          panel.webview.html = getWebviewContent();
+        });
+      }
     }
   }
 
@@ -354,6 +373,21 @@ export class ExtensionManager {
         callback: (extension, editor) => extension.runAllTests(editor),
       }),
       this.registerCommand({
+        type: 'active-text-editor-workspace',
+        name: 'test-case-generation',
+        callback: (extension, editor) => extension.runAllTests(editor),
+      }),
+      this.registerCommand({
+        type: 'active-text-editor',
+        name: 'test-case-generation',
+        callback: (extension, editor) => extension.runAllTests(editor),
+      }),
+      this.registerCommand({
+        type: 'test-case-generation-webview',
+        name: 'test-case-generation',
+        callback: (extension, editor) => extension.runAllTests(editor),
+      }),
+      this.registerCommand({
         type: 'active-text-editor',
         name: 'debug-tests',
         callback: (extension, editor, ...identifiers) => {
@@ -460,3 +494,17 @@ const ReleaseNotes: Record<string, string> = {
   '5.0.1': `${ReleaseNoteBase}/release-note-v5.md#v50-pre-release-roll-up`,
   '5.0.0': `${ReleaseNoteBase}/release-note-v5.md#v50-pre-release-roll-up`,
 };
+
+function getWebviewContent() {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cat Coding</title>
+</head>
+<body>
+    <img src="https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif" width="300" />
+</body>
+</html>`;
+}

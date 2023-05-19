@@ -185,6 +185,11 @@
     },
     "commands": [
       {
+        "command": "io.orta.jest.editor.webview.test-case-generation",
+        "title": "Start new cat coding session",
+        "category": "Cat Coding"
+      },
+      {
         "command": "io.orta.jest.start",
         "title": "Jest: Start All Runners"
       },
@@ -227,6 +232,10 @@
       {
         "command": "io.orta.jest.editor.run-all-tests",
         "title": "Jest: Run Related Tests"
+      },
+      {
+        "command": "io.orta.jest.editor.test-case-generation",
+        "title": "Jest: Generate Test Cases"
       },
       {
         "command": "io.orta.jest.setup-extension",
@@ -301,12 +310,21 @@
         {
           "command": "io.orta.jest.editor.run-all-tests",
           "when": "jest:never"
+        },
+        {
+          "command": "io.orta.jest.editor.test-case-generation",
+          "when": "jest:never"
         }
       ],
       "editor/context": [
         {
           "when": "jest:run.interactive && editorLangId =~ /(javascript|javascriptreact|typescript|typescriptreact|vue)/ ",
           "command": "io.orta.jest.editor.run-all-tests",
+          "group": "Jest"
+        },
+        {
+          "when": "jest:run.interactive && editorLangId =~ /(javascript|javascriptreact|typescript|typescriptreact|vue)/ && editorHasSelection && !editorHasMultipleSelections",
+          "command": "io.orta.jest.editor.test-case-generation",
           "group": "Jest"
         }
       ],

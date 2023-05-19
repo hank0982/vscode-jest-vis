@@ -730,6 +730,7 @@ export class JestExt {
     if (event.document.isDirty) {
       return;
     }
+
     if (event.document.uri.scheme === 'git') {
       return;
     }
@@ -789,15 +790,18 @@ export class JestExt {
     // restart jest since coverage condition has changed
     return this.triggerUpdateSettings(this.extContext.settings);
   }
+
   toggleAutoRun(): Promise<void> {
     this.extContext.settings.autoRun.toggle();
 
     // restart jest since coverage condition has changed
     return this.triggerUpdateSettings(this.extContext.settings);
   }
+
   runItemCommand(testItem: vscode.TestItem, itemCommand: ItemCommand): void {
     this.testProvider?.runItemCommand(testItem, itemCommand);
   }
+
   enableLoginShell(): void {
     if (this.extContext.settings.shell.useLoginShell) {
       return;

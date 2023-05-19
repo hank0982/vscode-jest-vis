@@ -33,6 +33,7 @@ export class DefaultFormatter extends AbstractFormatter {
     editor.setDecorations(this.uncoveredLine, []);
     editor.setDecorations(this.partiallyCoveredLine, []);
   }
+
   dispose(): void {
     this.partiallyCoveredLine.dispose();
     this.uncoveredLine.dispose();
