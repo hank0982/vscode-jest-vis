@@ -16,7 +16,6 @@ export class GutterFormatter extends AbstractFormatter {
     colors?: CoverageColors
   ) {
     super(coverageMapProvider, colors);
-
     const coveredColor = this.getColorString('covered', 0.75);
     const uncoveredColor = this.getColorString('uncovered', 0.75);
     const partiallyCoveredColor = this.getColorString('partially-covered', 0.75);

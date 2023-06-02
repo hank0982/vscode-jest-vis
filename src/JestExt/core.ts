@@ -44,6 +44,8 @@ import { MessageAction } from '../messaging';
 import { getExitErrorDef } from '../errors';
 import { WorkspaceManager } from '../workspace-manager';
 import { ansiEsc, JestOutputTerminal } from './output-terminal';
+import { TestPatternsCoverageMapProvider } from '../TestPatternsCoverage/TestPatternsCoverageMapProvider';
+import { TestPatternCoverageOverlay } from '../TestPatternsCoverage/CoverageOverlay';
 
 interface RunTestPickItem extends vscode.QuickPickItem {
   id: DebugTestIdentifier;
@@ -63,9 +65,10 @@ interface JestCommandSettings {
 }
 /** extract lines starts and end with [] */
 export class JestExt {
+  testPatternsCoverageMapProvider: TestPatternsCoverageMapProvider;
   coverageMapProvider: CoverageMapProvider;
   coverageOverlay: CoverageOverlay;
-
+  testPatternOverlay: TestPatternCoverageOverlay;
   testResultProvider: TestResultProvider;
   debugConfigurationProvider: DebugConfigurationProvider;
   coverageCodeLensProvider: CoverageCodeLensProvider;
@@ -109,11 +112,19 @@ export class JestExt {
       `Jest (${workspaceFolder.name})`
     );
     this.coverageCodeLensProvider = coverageCodeLensProvider;
-
+    this.testPatternsCoverageMapProvider = new TestPatternsCoverageMapProvider();
     this.coverageMapProvider = new CoverageMapProvider();
     this.coverageOverlay = new CoverageOverlay(
       vscodeContext,
       this.coverageMapProvider,
+      pluginSettings.showCoverageOnLoad,
+      pluginSettings.coverageFormatter,
+      pluginSettings.coverageColors
+    );
+
+    this.testPatternOverlay = new TestPatternCoverageOverlay(
+      vscodeContext,
+      this.testPatternsCoverageMapProvider,
       pluginSettings.showCoverageOnLoad,
       pluginSettings.coverageFormatter,
       pluginSettings.coverageColors
@@ -407,15 +418,22 @@ export class JestExt {
     const showCoverage = this.coverageOverlay.enabled ?? updatedSettings.showCoverageOnLoad;
     updatedSettings.showCoverageOnLoad = showCoverage;
 
-    this.coverageOverlay.dispose();
-    this.coverageOverlay = new CoverageOverlay(
+    // this.coverageOverlay.dispose();
+    // this.coverageOverlay = new CoverageOverlay(
+    //   this.vscodeContext,
+    //   this.coverageMapProvider,
+    //   updatedSettings.showCoverageOnLoad,
+    //   updatedSettings.coverageFormatter,
+    //   updatedSettings.coverageColors
+    // );
+    this.testPatternOverlay.dispose();
+    this.testPatternOverlay = new TestPatternCoverageOverlay(
       this.vscodeContext,
-      this.coverageMapProvider,
+      this.testPatternsCoverageMapProvider,
       updatedSettings.showCoverageOnLoad,
       updatedSettings.coverageFormatter,
       updatedSettings.coverageColors
     );
-
     this.extContext = createJestExtContext(this.extContext.workspace, updatedSettings, this.output);
     this.deubgConfig = undefined;
 
@@ -785,8 +803,8 @@ export class JestExt {
   }
 
   toggleCoverageOverlay(): Promise<void> {
-    this.coverageOverlay.toggleVisibility();
-
+    // this.coverageOverlay.toggleVisibility();
+    this.testPatternOverlay.toggleVisibility();
     // restart jest since coverage condition has changed
     return this.triggerUpdateSettings(this.extContext.settings);
   }
@@ -837,15 +855,41 @@ export class JestExt {
       this.coverageOverlay.updateVisibleEditors();
     });
   }
+
+  _updateTestPatternCoverageMap(
+    testPattern: string,
+    isPass: boolean,
+    coverageMap?: CoverageMapData
+  ): Promise<void> {
+    console.log(testPattern, isPass);
+    console.log(coverageMap);
+    return this.testPatternsCoverageMapProvider.update(testPattern, isPass, coverageMap);
+  }
+
   private updateWithData(data: JestTotalResults, process: JestProcessInfo): void {
     const noAnsiData = resultsWithoutAnsiEscapeSequence(data);
     const normalizedData = resultsWithLowerCaseWindowsDriveLetters(noAnsiData);
     this._updateCoverageMap(normalizedData.coverageMap);
 
+    if (process.request.type === 'by-file-test-pattern' && this.isSingleTest(process)) {
+      // TODO: currently this is a hack, change it to nested Map instead.
+      const testPattern =
+        process.request.testFileNamePattern + '|' + process.request.testNamePattern;
+      console.log(normalizedData);
+      this._updateTestPatternCoverageMap(
+        testPattern,
+        normalizedData.success,
+        normalizedData.coverageMap
+      );
+    }
     const statusList = this.testResultProvider.updateTestResults(normalizedData, process);
 
     updateDiagnostics(statusList, this.failDiagnostics);
 
     this.refreshDocumentChange();
+  }
+
+  private isSingleTest(process: JestProcessInfo) {
+    return process.request?.run?.item?.children.size === 0;
   }
 }

@@ -159,6 +159,7 @@ export class JestProcess implements JestProcessInfo {
           escapeRegExp(this.request.testNamePattern),
           this.extContext.settings.shell.toSetting()
         );
+        args.push('--coverage');
         args.push('--watchAll=false', '--testPathPattern', regex);
         if (this.request.updateSnapshot) {
           args.push('--updateSnapshot');

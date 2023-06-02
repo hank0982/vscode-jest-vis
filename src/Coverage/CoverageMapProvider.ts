@@ -22,6 +22,7 @@ export class CoverageMapProvider {
     this._map = createCoverageMap();
     this.mapStore = createSourceMapStore();
   }
+
   get map(): CoverageMap {
     return this._map;
   }

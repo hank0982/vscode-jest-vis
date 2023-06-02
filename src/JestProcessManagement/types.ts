@@ -1,6 +1,7 @@
 import { RunnerEvent } from 'jest-editor-support';
 import { JestTestProcessType } from '../Settings';
 import { JestProcess } from './JestProcess';
+import { JestTestRun } from '../test-provider/test-provider-helper';
 
 export type JestProcessEvent = RunnerEvent | 'processStarting';
 export interface JestProcessListener {
@@ -85,7 +86,8 @@ export type JestProcessRequestTransform = (request: JestProcessRequest) => JestP
 export type JestProcessRequestBase = JestProcessRequestSimple & {
   transform?: JestProcessRequestTransform;
 };
-export type JestProcessRequest = JestProcessRequestBase & JestProcessRequestCommon;
+export type JestProcessRequest = JestProcessRequestBase &
+  JestProcessRequestCommon & { run?: JestTestRun };
 
 export interface TaskArrayFunctions<T> {
   map: <M>(f: (task: Task<T>) => M) => M[];
