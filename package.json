@@ -185,9 +185,9 @@
     },
     "commands": [
       {
-        "command": "io.orta.jest.editor.webview.test-case-generation",
-        "title": "Start new cat coding session",
-        "category": "Cat Coding"
+        "command": "io.orta.jest.editor.webview.rank-suspiciousness",
+        "title": "Start ranking lines of code by suspiciousness",
+        "category": "Ranking lines of code by Suspiciousness"
       },
       {
         "command": "io.orta.jest.start",

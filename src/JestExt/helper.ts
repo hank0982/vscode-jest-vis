@@ -111,6 +111,7 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
     jestCommandLine: config.get<string>('jestCommandLine'),
     rootPath: absoluteRootPath(config.get<string>('rootPath') ?? '', uri.fsPath),
     showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad') ?? false,
+    showTestPatternsCoverageOnLoad: config.get<boolean>('showTestPatternsCoverageOnLoad') ?? false,
     coverageFormatter: config.get<string>('coverageFormatter') ?? 'DefaultFormatter',
     debugMode: config.get<boolean>('debugMode'),
     coverageColors: config.get<CoverageColors>('coverageColors'),

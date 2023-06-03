@@ -59,6 +59,16 @@ export class TestPatternsCoverageMapProvider {
     }
   }
 
+  getSummary(filePath: string) {
+    let numOfPassTests = 0;
+    let numOfFailedTests = 0;
+    this.getFileCoverages(filePath).forEach((c) => {
+      if (c.isPass === true) numOfPassTests++;
+      else if (c.isPass === false) numOfFailedTests++;
+    });
+    return `No. Failed Tests: ${numOfFailedTests} No. Pass Tests: ${numOfPassTests}`;
+  }
+
   setFileCoverage(testPattern: string, filePath: string, map: CoverageMap): void {
     if (!this._testPatternsToMap.get(testPattern))
       this._testPatternsToMap.set(testPattern, createCoverageMap());

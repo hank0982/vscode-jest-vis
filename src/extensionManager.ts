@@ -14,6 +14,7 @@ import {
 } from './setup-wizard';
 import { ItemCommand } from './test-provider/types';
 import { enabledWorkspaceFolders } from './workspace-manager';
+import { TestPatternsCoverageCodeLensProvider } from './TestPatternsCoverage/TestPatternsCoverageCodeLensProvider';
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt | undefined;
 
@@ -50,10 +51,8 @@ export type RegisterCommand =
       callback: (extension: JestExt, textEditor: vscode.TextEditor, ...args: any[]) => any;
     }
   | {
-      type: 'test-case-generation-webview';
+      type: 'rank-suspiciousness';
       name: string;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      callback: (extension: JestExt, textEditor: vscode.TextEditor, ...args: any[]) => any;
     };
 type CommandType = RegisterCommand['type'];
 const CommandPrefix: Record<CommandType, string> = {
@@ -62,12 +61,13 @@ const CommandPrefix: Record<CommandType, string> = {
   workspace: `${extensionName}.with-workspace`,
   'active-text-editor': `${extensionName}.editor`,
   'active-text-editor-workspace': `${extensionName}.editor.workspace`,
-  'test-case-generation-webview': `${extensionName}.editor.webview`,
+  'rank-suspiciousness': `${extensionName}.editor.webview`,
 };
 export type StartWizardFunc = (options?: StartWizardOptions) => ReturnType<typeof startWizard>;
 export class ExtensionManager {
   debugConfigurationProvider: DebugConfigurationProvider;
   coverageCodeLensProvider: CoverageCodeLensProvider;
+  testPatternsCodeLensProvider: TestPatternsCoverageCodeLensProvider;
   startWizard: StartWizardFunc;
 
   private extByWorkspace: Map<string, JestExt> = new Map();
@@ -77,6 +77,7 @@ export class ExtensionManager {
     this.context = context;
 
     this.debugConfigurationProvider = new DebugConfigurationProvider();
+    this.testPatternsCodeLensProvider = new TestPatternsCoverageCodeLensProvider(this.getByDocUri);
     this.coverageCodeLensProvider = new CoverageCodeLensProvider(this.getByDocUri);
     this.startWizard = (options?: StartWizardOptions) =>
       startWizard(this.debugConfigurationProvider, context, options);
@@ -117,7 +118,8 @@ export class ExtensionManager {
       this.context,
       workspaceFolder,
       this.debugConfigurationProvider,
-      this.coverageCodeLensProvider
+      this.coverageCodeLensProvider,
+      this.testPatternsCodeLensProvider
     );
     this.extByWorkspace.set(workspaceFolder.name, jestExt);
     jestExt.startSession();
@@ -225,16 +227,59 @@ export class ExtensionManager {
           }
         );
       }
-      case 'test-case-generation-webview': {
+      case 'rank-suspiciousness': {
         return vscode.commands.registerCommand(commandName, () => {
           // Create and show a new webview
-          const panel = vscode.window.createWebviewPanel(
-            'catCoding', // Identifies the type of the webview. Used internally
-            'Cat Coding', // Title of the panel displayed to the user
-            vscode.ViewColumn.Beside, // Editor column to show the new webview panel in.
-            {} // Webview options. More on these later.
-          );
-          panel.webview.html = getWebviewContent();
+          if (vscode.window.activeTextEditor?.document) {
+            const panel = vscode.window.createWebviewPanel(
+              'rankSuspiciousness', // Identifies the type of the webview. Used internally
+              'Rank Suspiciousness', // Title of the panel displayed to the user
+              vscode.ViewColumn.Beside, // Editor column to show the new webview panel in.
+              {} // Webview options. More on these later.
+            );
+            const list: string[] = [];
+            const lineCoverages = this.getByDocUri(
+              vscode.window.activeTextEditor?.document.uri
+            )?.testPatternOverlay.formatter.getLineCoveragesWithDocument(
+              vscode.window.activeTextEditor?.document
+            );
+            if (lineCoverages) {
+              const sortedLineCoverages = [...lineCoverages.entries()].filter(
+                (a) => a[1].isCovered && a[1].hue !== undefined
+              );
+              sortedLineCoverages.sort((a, b) => {
+                if (a[1].hue !== undefined && b[1].hue !== undefined) {
+                  return 1 - b[1].hue - (1 - a[1].hue);
+                } else return 0;
+              });
+              console.log(sortedLineCoverages);
+              sortedLineCoverages.forEach(([line, lineCoverage]) => {
+                const lineOfCode = vscode.window.activeTextEditor?.document.getText(
+                  new vscode.Range(line - 1, 0, line, 0)
+                );
+                if (lineCoverage.isCovered && lineCoverage.hue !== undefined) {
+                  const color = `hsl(${lineCoverage.hue * 120}, 100%, 50%, 0.4)`;
+                  const html = `
+                      <div class="item" style="background-color: ${color}">
+                        <div class="content">
+                        <div class="right floated content">
+                          <div class="ui button">Add</div>
+                        </div>
+                          <div class="header">${lineOfCode?.trim()}</div>
+                          <div class="description">No. failed tests: ${
+                            lineCoverage.numOfFailedTests
+                          }
+                          No. pass tests: ${lineCoverage.numOfPassTests}
+                          </div>
+                        </div>
+                      </div>`;
+                  list.push(html);
+                }
+              });
+            }
+
+            panel.webview.html = getWebviewContent(list);
+          }
         });
       }
     }
@@ -373,19 +418,8 @@ export class ExtensionManager {
         callback: (extension, editor) => extension.runAllTests(editor),
       }),
       this.registerCommand({
-        type: 'active-text-editor-workspace',
-        name: 'test-case-generation',
-        callback: (extension, editor) => extension.runAllTests(editor),
-      }),
-      this.registerCommand({
-        type: 'active-text-editor',
-        name: 'test-case-generation',
-        callback: (extension, editor) => extension.runAllTests(editor),
-      }),
-      this.registerCommand({
-        type: 'test-case-generation-webview',
-        name: 'test-case-generation',
-        callback: (extension, editor) => extension.runAllTests(editor),
+        type: 'rank-suspiciousness',
+        name: 'rank-suspiciousness',
       }),
       this.registerCommand({
         type: 'active-text-editor',
@@ -495,16 +529,20 @@ const ReleaseNotes: Record<string, string> = {
   '5.0.0': `${ReleaseNoteBase}/release-note-v5.md#v50-pre-release-roll-up`,
 };
 
-function getWebviewContent() {
+function getWebviewContent(list: string[]) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.5.0/dist/semantic.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.5.0/dist/semantic.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cat Coding</title>
 </head>
 <body>
-    <img src="https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif" width="300" />
+<div class="ui middle aligned divided list">
+  ${list.join('\n')}
+</div>
 </body>
 </html>`;
 }

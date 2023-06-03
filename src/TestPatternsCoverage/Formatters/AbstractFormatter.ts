@@ -45,12 +45,19 @@ export abstract class AbstractFormatter {
     editor: vscode.TextEditor,
     onNoCoverageInfo?: () => CoverageStatus
   ): Map<number, LineHueCoverage> {
-    const fileCoverages = this.coverageMapProvider.getFileCoverages(editor.document.fileName);
+    return this.getLineCoveragesWithDocument(editor.document, onNoCoverageInfo);
+  }
+
+  getLineCoveragesWithDocument(
+    document: vscode.TextDocument,
+    onNoCoverageInfo?: () => CoverageStatus
+  ) {
+    const fileCoverages = this.coverageMapProvider.getFileCoverages(document.fileName);
     const totalSuccess = fileCoverages.reduce<number>((p, c) => p + (c.isPass === true ? 1 : 0), 0);
     const totalFailed = fileCoverages.reduce<number>((p, c) => p + (c.isPass === false ? 1 : 0), 0);
 
     const lineToCoverage = new Map<number, LineHueCoverage>();
-    for (let line = 1; line <= editor.document.lineCount; line++) {
+    for (let line = 1; line <= document.lineCount; line++) {
       let numOfPassTests = 0;
       let numOfFailedTests = 0;
       fileCoverages.forEach((c) => {

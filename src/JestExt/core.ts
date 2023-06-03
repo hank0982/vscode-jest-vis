@@ -46,6 +46,7 @@ import { WorkspaceManager } from '../workspace-manager';
 import { ansiEsc, JestOutputTerminal } from './output-terminal';
 import { TestPatternsCoverageMapProvider } from '../TestPatternsCoverage/TestPatternsCoverageMapProvider';
 import { TestPatternCoverageOverlay } from '../TestPatternsCoverage/CoverageOverlay';
+import { TestPatternsCoverageCodeLensProvider } from '../TestPatternsCoverage/TestPatternsCoverageCodeLensProvider';
 
 interface RunTestPickItem extends vscode.QuickPickItem {
   id: DebugTestIdentifier;
@@ -67,6 +68,7 @@ interface JestCommandSettings {
 export class JestExt {
   testPatternsCoverageMapProvider: TestPatternsCoverageMapProvider;
   coverageMapProvider: CoverageMapProvider;
+  testPatternsCoverageCodeLensProvider: TestPatternsCoverageCodeLensProvider;
   coverageOverlay: CoverageOverlay;
   testPatternOverlay: TestPatternCoverageOverlay;
   testResultProvider: TestResultProvider;
@@ -97,7 +99,8 @@ export class JestExt {
     vscodeContext: vscode.ExtensionContext,
     workspaceFolder: vscode.WorkspaceFolder,
     debugConfigurationProvider: DebugConfigurationProvider,
-    coverageCodeLensProvider: CoverageCodeLensProvider
+    coverageCodeLensProvider: CoverageCodeLensProvider,
+    testPatternsCoverageCodeLensProvider: TestPatternsCoverageCodeLensProvider
   ) {
     this.vscodeContext = vscodeContext;
     const pluginSettings = getExtensionResourceSettings(workspaceFolder.uri);
@@ -107,11 +110,11 @@ export class JestExt {
     this.extContext = createJestExtContext(workspaceFolder, pluginSettings, this.output);
     this.logging = this.extContext.loggingFactory.create('JestExt');
     this.workspaceManager = new WorkspaceManager();
-
     this.failDiagnostics = vscode.languages.createDiagnosticCollection(
       `Jest (${workspaceFolder.name})`
     );
     this.coverageCodeLensProvider = coverageCodeLensProvider;
+    this.testPatternsCoverageCodeLensProvider = testPatternsCoverageCodeLensProvider;
     this.testPatternsCoverageMapProvider = new TestPatternsCoverageMapProvider();
     this.coverageMapProvider = new CoverageMapProvider();
     this.coverageOverlay = new CoverageOverlay(
@@ -416,8 +419,10 @@ export class JestExt {
 
     // coverage
     const showCoverage = this.coverageOverlay.enabled ?? updatedSettings.showCoverageOnLoad;
+    const showTestPatternsCoverage =
+      this.testPatternOverlay.enabled ?? updatedSettings.showTestPatternsCoverageOnLoad;
     updatedSettings.showCoverageOnLoad = showCoverage;
-
+    updatedSettings.showTestPatternsCoverageOnLoad = showTestPatternsCoverage;
     // this.coverageOverlay.dispose();
     // this.coverageOverlay = new CoverageOverlay(
     //   this.vscodeContext,
@@ -430,7 +435,7 @@ export class JestExt {
     this.testPatternOverlay = new TestPatternCoverageOverlay(
       this.vscodeContext,
       this.testPatternsCoverageMapProvider,
-      updatedSettings.showCoverageOnLoad,
+      updatedSettings.showTestPatternsCoverageOnLoad,
       updatedSettings.coverageFormatter,
       updatedSettings.coverageColors
     );
@@ -861,9 +866,12 @@ export class JestExt {
     isPass: boolean,
     coverageMap?: CoverageMapData
   ): Promise<void> {
-    console.log(testPattern, isPass);
-    console.log(coverageMap);
-    return this.testPatternsCoverageMapProvider.update(testPattern, isPass, coverageMap);
+    return this.testPatternsCoverageMapProvider
+      .update(testPattern, isPass, coverageMap)
+      .then(() => {
+        this.testPatternsCoverageCodeLensProvider.coverageChanged();
+        this.testPatternOverlay.updateVisibleEditors();
+      });
   }
 
   private updateWithData(data: JestTotalResults, process: JestProcessInfo): void {

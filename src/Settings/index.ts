@@ -41,6 +41,7 @@ export interface PluginResourceSettings {
   jestCommandLine?: string;
   rootPath: string;
   showCoverageOnLoad: boolean;
+  showTestPatternsCoverageOnLoad: boolean;
   coverageFormatter: string;
   debugMode?: boolean;
   coverageColors?: CoverageColors;

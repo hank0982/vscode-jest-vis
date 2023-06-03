@@ -21,6 +21,10 @@ const addSubscriptions = (context: vscode.ExtensionContext): void => {
   context.subscriptions.push(
     ...statusBar.register((folder: string) => extensionManager.getByName(folder)),
     ...extensionManager.register(),
+    vscode.languages.registerCodeLensProvider(
+      languages,
+      extensionManager.testPatternsCodeLensProvider
+    ),
     vscode.languages.registerCodeLensProvider(languages, extensionManager.coverageCodeLensProvider),
     ...tiContextManager.registerCommands(),
     ...languageProvider.register()
