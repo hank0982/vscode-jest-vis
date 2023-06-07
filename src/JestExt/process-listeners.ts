@@ -8,6 +8,7 @@ import { JestRunEvent } from './types';
 import { MonitorLongRun } from '../Settings';
 import { extensionName } from '../appGlobals';
 import { RunShell } from './run-shell';
+import { parse } from 'jest-editor-support';
 
 // command not found error for anything but "jest", as it most likely not be caused by env issue
 const POSSIBLE_ENV_ERROR_REGEX =
@@ -122,7 +123,68 @@ export class AbstractProcessListener {
     return false;
   }
 }
+const JsonRegexp = /\{.*:\{.*:.*\}\}/gm;
 
+export class ListRelatedFileListener extends AbstractProcessListener {
+  protected get name(): string {
+    return 'ListRelatedFileListener';
+  }
+  private buffer = '';
+  private stderrOutput = '';
+  private onResult: ListTestFilesCallback;
+
+  constructor(session: ListenerSession, onResult: ListTestFilesCallback) {
+    super(session);
+    this.onResult = onResult;
+  }
+
+  protected onExecutableOutput(_process: JestProcess, data: string): void {
+    this.buffer += data;
+  }
+
+  protected onExecutableStdErr(process: JestProcess, message: string, raw: string): void {
+    super.onExecutableStdErr(process, message, raw);
+    this.stderrOutput += raw;
+  }
+
+  protected onProcessClose(process: JestProcess, code?: number, signal?: string): void {
+    console.log(process);
+    console.log(code);
+    if (code !== 0) {
+      if (super.retryWithLoginShell(process, code, signal)) {
+        return;
+      }
+      return this.onResult(undefined, this.stderrOutput, code);
+    }
+
+    try {
+      console.log(this.buffer);
+      const json = this.buffer.match(JsonRegexp);
+      console.log(json);
+      if (!json || json.length === 0) {
+        // no test file is probably all right
+        this.logging('debug', 'no test file is found');
+        return this.onResult([]);
+      }
+      const uriFiles = json.reduce((totalFiles, list) => {
+        const files: string[] = JSON.parse(list);
+        // convert to uri style filePath to match vscode document names
+        return totalFiles.concat(files.filter((f) => f).map((f) => vscode.Uri.file(f).fsPath));
+      }, [] as string[]);
+
+      this.logging('debug', `got ${uriFiles.length} test files`);
+      uriFiles.forEach((f: string) => {
+        parse(f).itBlocks.forEach((block) => {
+          console.log(block.name);
+        });
+      });
+      return this.onResult(uriFiles);
+    } catch (e) {
+      this.logging('warn', 'failed to parse result:', this.buffer, 'error=', e);
+      this.onResult(undefined, toErrorString(e), code);
+    }
+  }
+}
 const JsonArrayRegexp = /^\[.*?\]$/gm;
 export class ListTestFileListener extends AbstractProcessListener {
   protected get name(): string {
@@ -140,6 +202,7 @@ export class ListTestFileListener extends AbstractProcessListener {
   protected onExecutableOutput(_process: JestProcess, data: string): void {
     this.buffer += data;
   }
+
   protected onExecutableStdErr(process: JestProcess, message: string, raw: string): void {
     super.onExecutableStdErr(process, message, raw);
     this.stderrOutput += raw;
@@ -167,6 +230,11 @@ export class ListTestFileListener extends AbstractProcessListener {
       }, [] as string[]);
 
       this.logging('debug', `got ${uriFiles.length} test files`);
+      uriFiles.forEach((f: string) => {
+        parse(f).itBlocks.forEach((block) => {
+          console.log(block.name);
+        });
+      });
       return this.onResult(uriFiles);
     } catch (e) {
       this.logging('warn', 'failed to parse result:', this.buffer, 'error=', e);

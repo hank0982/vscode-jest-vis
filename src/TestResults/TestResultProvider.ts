@@ -178,6 +178,7 @@ class Parser {
     return res;
   }
 }
+
 export class TestResultProvider {
   private _options: TestResultProviderOptions;
   events: TestResultEvents;
@@ -259,6 +260,7 @@ export class TestResultProvider {
 
     this.events.testListUpdated.fire(testFiles);
   }
+
   getTestList(): string[] {
     if (this.testFiles && this.testFiles.length > 0) {
       return this.testFiles;
@@ -280,6 +282,9 @@ export class TestResultProvider {
     return this.testSuites.get(filePath);
   }
 
+  public getTestSuiteRecord(filePath: string): TestSuiteRecord | undefined {
+    return this.testSuites.get(filePath);
+  }
   /**
    * match assertions with source file, if successful, update cache, results and related.
    * Will also fire testSuiteChanged event

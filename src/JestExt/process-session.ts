@@ -8,17 +8,23 @@ import {
   JestProcessRequestTransform,
 } from '../JestProcessManagement';
 import { JestTestProcessType } from '../Settings';
-import { RunTestListener, ListTestFileListener } from './process-listeners';
+import {
+  RunTestListener,
+  ListTestFileListener,
+  ListRelatedFileListener,
+} from './process-listeners';
 import { JestExtProcessContext } from './types';
 
-type InternalProcessType = 'list-test-files';
+type InternalProcessType = 'list-test-files' | 'list-related-test-files';
 export type ListTestFilesCallback = (
   fileNames?: string[],
   error?: string,
-  exitCode?: number
+  exitCode?: number,
+  testPatterns?: string[]
 ) => void;
+
 export type InternalRequestBase = {
-  type: Extract<InternalProcessType, 'list-test-files'>;
+  type: Extract<InternalProcessType, 'list-test-files' | 'list-related-test-files'>;
   onResult: ListTestFilesCallback;
 };
 
@@ -71,6 +77,7 @@ export interface ProcessSession {
     request: T
   ) => JestProcessInfo | undefined;
 }
+
 export interface ListenerSession {
   context: JestExtProcessContext;
   scheduleProcess: <T extends JestExtRequestType = JestExtRequestType>(
@@ -93,8 +100,12 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
     logging('debug', `scheduling jest process: ${request.type}`);
     try {
       const pRequest = createProcessRequest(request);
-
+      console.log('ddddd');
+      console.log(pRequest);
+      console.log('ddddd');
       const process = jestProcessManager.scheduleJestProcess(pRequest);
+      console.log(process);
+      console.log('ddddd');
       if (!process) {
         logging('warn', `request schedule failed: ${requestString(pRequest)}`);
         return;
@@ -145,6 +156,16 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
           type: 'not-test',
           args: ['--listTests', '--json', '--watchAll=false'],
           listener: new ListTestFileListener(lSession, request.onResult),
+          schedule,
+        });
+      }
+      case 'list-related-test-files': {
+        const schedule = ProcessScheduleStrategy['not-test'];
+        return transform({
+          ...request,
+          type: 'not-test',
+          args: ['--findRelatedTests', '--json', '--watchAll=false'],
+          listener: new ListRelatedFileListener(lSession, request.onResult),
           schedule,
         });
       }

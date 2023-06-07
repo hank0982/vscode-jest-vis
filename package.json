@@ -230,6 +230,10 @@
         "title": "Jest: Toggle Coverage for Current Workspace"
       },
       {
+        "command": "io.orta.jest.editor.run-tarantula-coverage",
+        "title": "Jest: Run Tarantula Coverage"
+      },
+      {
         "command": "io.orta.jest.editor.run-all-tests",
         "title": "Jest: Run Related Tests"
       },
@@ -317,6 +321,11 @@
         }
       ],
       "editor/context": [
+        {
+          "when": "jest:run.interactive && editorLangId =~ /(javascript|javascriptreact|typescript|typescriptreact|vue)/ ",
+          "command": "io.orta.jest.editor.run-tarantula-coverage",
+          "group": "Jest"
+        },
         {
           "when": "jest:run.interactive && editorLangId =~ /(javascript|javascriptreact|typescript|typescriptreact|vue)/ ",
           "command": "io.orta.jest.editor.run-all-tests",

@@ -235,7 +235,10 @@ export class ExtensionManager {
               'rankSuspiciousness', // Identifies the type of the webview. Used internally
               'Rank Suspiciousness', // Title of the panel displayed to the user
               vscode.ViewColumn.Beside, // Editor column to show the new webview panel in.
-              {} // Webview options. More on these later.
+              {
+                // Enable scripts in the webview
+                enableScripts: true,
+              } // Webview options. More on these later.
             );
             const list: string[] = [];
             const lineCoverages = this.getByDocUri(
@@ -252,27 +255,82 @@ export class ExtensionManager {
                   return 1 - b[1].hue - (1 - a[1].hue);
                 } else return 0;
               });
-              console.log(sortedLineCoverages);
               sortedLineCoverages.forEach(([line, lineCoverage]) => {
                 const lineOfCode = vscode.window.activeTextEditor?.document.getText(
                   new vscode.Range(line - 1, 0, line, 0)
                 );
+                const passTestList = lineCoverage.passTests
+                  ?.map((t) => {
+                    return `<div class="item">
+                      <div class="content">
+                        <a class="header">${t.testPattern}</a>
+                        <div class="description">File Path: ${t.fileCoverage?.path}</div>
+                      </div>
+                    </div>`;
+                  })
+                  .join();
+                const failedTestList = lineCoverage.failedTests
+                  ?.map((t) => {
+                    return `<div class="item">
+                      <div class="content">
+                        <a class="header">${t.testPattern}</a>
+                        <div class="description">File Path: ${t.fileCoverage?.path}</div>
+                      </div>
+                    </div>`;
+                  })
+                  .join();
                 if (lineCoverage.isCovered && lineCoverage.hue !== undefined) {
                   const color = `hsl(${lineCoverage.hue * 120}, 100%, 50%, 0.4)`;
                   const html = `
-                      <div class="item" style="background-color: ${color}">
-                        <div class="content">
-                        <div class="right floated content">
-                          <div class="ui button">Add</div>
-                        </div>
-                          <div class="header">${lineOfCode?.trim()}</div>
-                          <div class="description">No. failed tests: ${
-                            lineCoverage.numOfFailedTests
-                          }
-                          No. pass tests: ${lineCoverage.numOfPassTests}
+                  <div class="item">    
+                    <div class="right floated">
+                      <button class="compact ui button" onclick="$('#line_${line}').modal('show');">?</button>
+                    </div>              
+                    <i class="square full icon" style="color: ${color}"></i> 
+                    <div class="content">
+                      <div class="header">${lineOfCode?.trim()}</div>
+                      <div class="description">
+                        No. failed tests: ${lineCoverage.numOfFailedTests}
+                        No. pass tests: ${lineCoverage.numOfPassTests}
+                      </div>
+                    </div>
+                  </div>
+                  <div id="line_${line}"class="ui modal">
+                    <i class="close icon"></i>
+                    <div class="header">
+                      Line ${line}
+                    </div>
+                    <div class="content">
+                      <div class="description">
+                        <div class="ui header">${lineOfCode?.trim()}</div>
+                        <p>No. failed tests: ${lineCoverage.numOfFailedTests}</p>
+                        <p>No. pass tests: ${lineCoverage.numOfPassTests}</p>
+                        <h3 class="ui top attached header">
+                          Pass test patterns
+                        </h3>
+                        <div class="ui attached segment">
+                          <div class="ui relaxed divided list">
+                            ${passTestList}
                           </div>
                         </div>
-                      </div>`;
+                        <h3 class="ui top attached header">
+                          Failed test patterns
+                        </h3>
+                        <div class="ui attached segment">
+                          <div class="ui relaxed divided list">
+                            ${failedTestList}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="actions">
+                      <div class="ui positive right labeled icon button">
+                        Done
+                        <i class="checkmark icon"></i>
+                      </div>
+                    </div>
+                  </div>
+                  `;
                   list.push(html);
                 }
               });
@@ -423,6 +481,11 @@ export class ExtensionManager {
       }),
       this.registerCommand({
         type: 'active-text-editor',
+        name: 'run-tarantula-coverage',
+        callback: (extension, editor) => extension.gatherTarantulaCoverage(editor),
+      }),
+      this.registerCommand({
+        type: 'active-text-editor',
         name: 'debug-tests',
         callback: (extension, editor, ...identifiers) => {
           extension.debugTests(editor.document, ...identifiers);
@@ -533,15 +596,18 @@ function getWebviewContent(list: string[]) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js" integrity="sha256-2Pmvv0kuTBOenSvLm6bvfBSSHrUJ+3A7x6P5Ebd07/g=" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.5.0/dist/semantic.min.css">
     <script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.5.0/dist/semantic.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cat Coding</title>
+    <title>Suspiciousness</title>
 </head>
 <body>
-<div class="ui middle aligned divided list">
-  ${list.join('\n')}
+<div class="ui container">
+  <div class="ui list middle aligned divided">
+    ${list.join('\n')}
+  </div>
 </div>
 </body>
 </html>`;

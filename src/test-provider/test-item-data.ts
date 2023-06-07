@@ -154,6 +154,7 @@ export class WorkspaceRoot extends TestItemDataBase {
     const updateSnapshot = itemCommand === ItemCommand.updateSnapshot;
     return { type: 'all-tests', updateSnapshot, transform };
   }
+
   discoverTest(run: JestTestRun): void {
     const testList = this.context.ext.testResultProvider.getTestList();
     // only trigger update when testList is not empty because it's possible test-list is not available yet,
@@ -226,7 +227,6 @@ export class WorkspaceRoot extends TestItemDataBase {
       }
     }
     this.testDocuments.set(absoluteFileName, docRoot);
-
     onTestDocument(docRoot);
 
     return docRoot;
@@ -347,6 +347,9 @@ export class WorkspaceRoot extends TestItemDataBase {
         fileName = process.request.testFileName;
         break;
       case 'by-file-pattern':
+        fileName = process.request.testFileNamePattern;
+        break;
+      case 'by-file-test-pattern':
         fileName = process.request.testFileNamePattern;
         break;
       default:
@@ -680,7 +683,6 @@ export class TestDocumentRoot extends TestResultData {
 
   public updateResultState(run: JestTestRun): void {
     const suiteResult = this.context.ext.testResultProvider.getTestSuiteResult(this.item.id);
-
     // only update suite status if the assertionContainer is empty, which can occur when
     // test file has syntax error or failed to run for whatever reason.
     // In this case we should mark the suite itself as TestExplorer won't be able to

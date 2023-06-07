@@ -1,4 +1,7 @@
-import { TestPatternsCoverageMapProvider } from '../TestPatternsCoverageMapProvider';
+import {
+  TestPatternCoverage,
+  TestPatternsCoverageMapProvider,
+} from '../TestPatternsCoverageMapProvider';
 import * as vscode from 'vscode';
 import { CoverageColors, CoverageStatus } from '../CoverageOverlay';
 import { FileCoverage } from 'istanbul-lib-coverage';
@@ -8,6 +11,8 @@ interface LineHueCoverage {
   numOfFailedTests: number;
   numOfPassTests: number;
   hue?: number;
+  passTests?: TestPatternCoverage[];
+  failedTests?: TestPatternCoverage[];
   isCovered: boolean;
 }
 type FunctionCoverageByLine = { [line: number]: number };
@@ -60,6 +65,8 @@ export abstract class AbstractFormatter {
     for (let line = 1; line <= document.lineCount; line++) {
       let numOfPassTests = 0;
       let numOfFailedTests = 0;
+      const passTests: TestPatternCoverage[] = [];
+      const failedTests: TestPatternCoverage[] = [];
       fileCoverages.forEach((c) => {
         if (c.fileCoverage) {
           const lineCoverage = c.fileCoverage.getLineCoverage();
@@ -107,14 +114,21 @@ export abstract class AbstractFormatter {
           });
           const status = statusList[0];
           if (status === 'covered') {
-            if (c.isPass) numOfPassTests++;
-            else numOfFailedTests++;
+            if (c.isPass) {
+              numOfPassTests++;
+              passTests.push(c);
+            } else {
+              numOfFailedTests++;
+              failedTests.push(c);
+            }
           }
         }
       });
       lineToCoverage.set(line, {
         numOfFailedTests,
         numOfPassTests,
+        passTests,
+        failedTests,
         isCovered: numOfFailedTests + numOfPassTests > 0,
       });
     }

@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { JestTotalResults } from 'jest-editor-support';
-
 import { statusBar, StatusBar, Mode, StatusBarUpdate, SBTestStats } from '../StatusBar';
 import {
   TestResultProvider,
@@ -74,7 +73,6 @@ export class JestExt {
   testResultProvider: TestResultProvider;
   debugConfigurationProvider: DebugConfigurationProvider;
   coverageCodeLensProvider: CoverageCodeLensProvider;
-
   // The ability to show fails in the problems section
   private failDiagnostics: vscode.DiagnosticCollection;
 
@@ -157,6 +155,23 @@ export class JestExt {
     this.setupStatusBar();
   }
 
+  public gatherTarantulaCoverage(editor?: vscode.TextEditor): void {
+    if (!editor) return;
+    this.testResultProvider.getTestList().forEach((testFile) => {
+      const testBlocks = this.testResultProvider.getTestSuiteRecord(testFile)?.testBlocks;
+      if (testBlocks && testBlocks !== 'failed') {
+        testBlocks.itBlocks.forEach((itBlock) => {
+          const pInfo = this.processSession.scheduleProcess({
+            type: 'by-file-test-pattern',
+            testFileNamePattern: testFile,
+            testNamePattern: itBlock.name,
+          });
+          console.log(pInfo);
+        });
+      }
+    });
+  }
+
   public showOutput(): void {
     this.extContext.output.show();
   }
@@ -170,6 +185,7 @@ export class JestExt {
       debugTests: this.debugTests,
     };
   }
+
   private setupWizardAction(taskId?: WizardTaskId): messaging.MessageAction {
     const command = `${extensionName}.setup-extension`;
     return {
@@ -191,6 +207,7 @@ export class JestExt {
       },
     };
   }
+
   private longRunMessage(event: Extract<JestRunEvent, { type: 'long-run' }>): string {
     const messages = [`Long Running Tests Warning: Jest process "${event.process.request.type}"`];
     if (event.numTotalTestSuites != null) {
@@ -275,6 +292,7 @@ export class JestExt {
     }
     return actions;
   };
+
   private createProcessSession(): ProcessSession {
     const sessionContext = {
       ...this.extContext,
@@ -283,13 +301,16 @@ export class JestExt {
     };
     return createProcessSession(sessionContext);
   }
+
   private toSBStats(stats: TestStats): SBTestStats {
     return { ...stats, isDirty: this.dirtyFiles.size > 0 };
   }
+
   private setTestFiles(list: string[] | undefined): void {
     this.testResultProvider.updateTestFileList(list);
     this.updateStatusBar({ stats: this.toSBStats(this.testResultProvider.getTestSuiteStats()) });
   }
+
   /**
    * starts a new session, notify all session-aware components and gather the metadata.
    */
@@ -355,6 +376,7 @@ export class JestExt {
     // since v4.3, all autoRun modes supports interactive-run
     vscode.commands.executeCommand('setContext', 'jest:run.interactive', true);
   }
+
   private updateTestFileEditor(editor: vscode.TextEditor): void {
     if (!this.isTestFileEditor(editor)) {
       return;
@@ -397,6 +419,7 @@ export class JestExt {
     this.output.revealOnError = settings.autoRevealOutput !== 'off';
     this.output.close();
   }
+
   private testResultProviderOptions(settings: PluginResourceSettings): TestResultProviderOptions {
     return {
       verbose: settings.debugMode ?? false,
@@ -405,6 +428,7 @@ export class JestExt {
         : undefined,
     };
   }
+
   public async triggerUpdateSettings(newSettings?: PluginResourceSettings): Promise<void> {
     const updatedSettings =
       newSettings ?? getExtensionResourceSettings(this.extContext.workspace.uri);
@@ -559,10 +583,12 @@ export class JestExt {
     this.updateStatusBar({ state: 'exec-error' });
     return 'fail';
   }
+
   /* istanbul ignore next */
   public activate(): void {
     // do nothing
   }
+
   public deactivate(): void {
     this.stopSession();
     this.extContext.output.dispose();
@@ -654,6 +680,7 @@ export class JestExt {
     }
     await vscode.debug.startDebugging(this.extContext.workspace, debugConfig);
   };
+
   public runAllTests(editor?: vscode.TextEditor): void {
     if (!editor) {
       if (this.processSession.scheduleProcess({ type: 'all-tests' })) {
@@ -774,6 +801,7 @@ export class JestExt {
       this.removeCachedTestResults(event.document, true);
     }
   }
+
   onDidSaveTextDocument(document: vscode.TextDocument): void {
     this.handleOnSaveRun(document);
     this.refreshDocumentChange(document);
@@ -800,9 +828,11 @@ export class JestExt {
   onDidCreateFiles(_event: vscode.FileCreateEvent): void {
     this.updateTestFileList();
   }
+
   onDidRenameFiles(_event: vscode.FileRenameEvent): void {
     this.updateTestFileList();
   }
+
   onDidDeleteFiles(_event: vscode.FileDeleteEvent): void {
     this.updateTestFileList();
   }
@@ -850,6 +880,7 @@ export class JestExt {
 
     this.updateStatusBar({ state: 'initial', mode: modes, stats: emptyTestStats() });
   }
+
   private updateStatusBar(status: StatusBarUpdate): void {
     this.status.update(status);
   }
@@ -883,7 +914,6 @@ export class JestExt {
       // TODO: currently this is a hack, change it to nested Map instead.
       const testPattern =
         process.request.testFileNamePattern + '|' + process.request.testNamePattern;
-      console.log(normalizedData);
       this._updateTestPatternCoverageMap(
         testPattern,
         normalizedData.success,

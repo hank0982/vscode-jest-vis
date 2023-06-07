@@ -63,10 +63,12 @@ export class JestProcess implements JestProcessInfo {
   public toString(): string {
     return `JestProcess: ${this.desc}; stopReason: ${this.stopReason}`;
   }
+
   public start(): Promise<void> {
     this._stopReason = undefined;
     return this.startRunner();
   }
+
   public stop(): Promise<void> {
     this._stopReason = 'on-demand';
     if (!this.task) {

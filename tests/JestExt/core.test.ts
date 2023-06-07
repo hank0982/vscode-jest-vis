@@ -48,6 +48,7 @@ import * as errors from '../../src/errors';
 import { ItemCommand } from '../../src/test-provider/types';
 import { WorkspaceManager } from '../../src/workspace-manager';
 import { TestResultProvider } from '../../src/TestResults';
+import { TestPatternsCoverageCodeLensProvider } from '../../src/TestPatternsCoverage';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
 const mockHelpers = helper as jest.Mocked<any>;
@@ -92,6 +93,7 @@ describe('JestExt', () => {
   const newJestExt = (override?: {
     settings?: Partial<PluginResourceSettings>;
     coverageCodeLensProvider?: any;
+    testPatternsCoverageCodeLensProvider?: any;
   }) => {
     mockSettings = { ...mockSettings, ...(override?.settings ?? {}) };
     mockGetExtensionResourceSettings.mockReturnValue(mockSettings);
@@ -102,7 +104,8 @@ describe('JestExt', () => {
       context,
       workspaceFolder,
       debugConfigurationProvider,
-      coverageCodeLensProvider
+      coverageCodeLensProvider,
+      testPatternsCoverageCodeLensProvider
     );
   };
   const mockEditor = (fileName: string, languageId = 'typescript'): any => {

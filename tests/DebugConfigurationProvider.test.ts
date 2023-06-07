@@ -1,5 +1,3 @@
-jest.unmock('../src/DebugConfigurationProvider');
-
 import { DebugConfigurationProvider } from '../src/DebugConfigurationProvider';
 import {
   getTestCommand,
@@ -11,6 +9,7 @@ import {
 import * as os from 'os';
 import * as fs from 'fs';
 import { makeWorkspaceFolder } from './test-helper';
+jest.unmock('../src/DebugConfigurationProvider');
 
 describe('DebugConfigurationProvider', () => {
   const fileName = '/a/file';
