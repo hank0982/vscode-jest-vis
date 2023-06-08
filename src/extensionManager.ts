@@ -292,6 +292,7 @@ export class ExtensionManager {
                       <div class="description">
                         No. failed tests: ${lineCoverage.numOfFailedTests}
                         No. pass tests: ${lineCoverage.numOfPassTests}
+                        hue's value: ${lineCoverage.hue}
                       </div>
                     </div>
                   </div>
@@ -305,6 +306,8 @@ export class ExtensionManager {
                         <div class="ui header">${lineOfCode?.trim()}</div>
                         <p>No. failed tests: ${lineCoverage.numOfFailedTests}</p>
                         <p>No. pass tests: ${lineCoverage.numOfPassTests}</p>
+                        <p>hue's value: ${lineCoverage.hue}</p>
+                        <p>suspicious value: ${1-lineCoverage.hue}</p>
                         <h3 class="ui top attached header">
                           Pass test patterns
                         </h3>
